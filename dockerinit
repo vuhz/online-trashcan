@@ -1,0 +1,37 @@
+#!/usr/bin/python3
+
+from re import search
+from subprocess import call, Popen, check_output, PIPE, CalledProcessError
+
+def info(text : str):
+	print(f"\033[38;2;255;183;197m[+] {text}\033[0m", end = '\n\r')
+
+call(f"docker build . -t dock", shell=True)
+Popen(f"docker run --privileged -p 10002:10002 -it dock", shell=True)
+
+while True:
+	output = check_output("docker ps", shell=True).decode()
+	ID = search(r'(\w+) *\w+ *\".+\" *.+', output)
+	if ID:
+		ID = ID.group(1)
+		break
+try:
+	try:
+	    output = check_output(f"docker exec -i {ID} find / -path '*/x86_64-linux-gnu/libc.so.6' 2>/dev/null || docker exec -i {ID} find / -path '*/libc.so.6' 2>/dev/null", shell=True)
+	    path = output.decode()
+	except CalledProcessError as e:
+	    path = e.output.decode()
+
+	path = ''.join(x + "/" for x in path[0:-1].split("/")[0:-1])
+	libc = path + "libc.so.6"
+	ld = path + "ld-linux-x86-64.so.2"
+
+	info(f"libc path: {libc}")
+	call(f"docker cp {ID}:{libc} .", shell=True)
+	info(f"ld path: {ld}")
+	call(f"docker cp {ID}:{ld} .", shell=True)
+
+except Exception as e:
+	print(e)
+	
+Popen(f"docker rm {ID} -f", shell=True, stdout=PIPE).stdout.read()

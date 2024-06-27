@@ -1,0 +1,11 @@
+#!/bin/sh
+
+if [ "$2" != "" ]; then
+    output="$(ROPgadget --binary ./"$1" | grep --color=always ": $2")"
+else
+    output="$(ROPgadget --binary ./"$1")"
+fi
+
+output="${output%.}"
+echo "$output" | sed -n 1p | awk -F ': ' '{print $1}' | sed 's/\x1B\[[a-zA-Z0-9;]*m//g' | sed 's/\x1B\[[0-9;]*[JK]//g' | clip.exe
+echo "$output"
